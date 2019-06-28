@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: DOMUtil.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: DOMUtil.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Generate a reduce function for use on array-like objects
+ * (i.e. Element.classList).
+ */
+const reduce = Array.prototype.reduce.call.bind(Array.prototype.reduce);
+
+/**
+ * Collect all elements from a specified descendant to a specified ancestor
+ * (inclusive).
+ * @param {HTMLElement} node Descendent element
+ * @param {HTMLElement} root Top-level ancestor element
+ * @return {Array}
+ */
+export function getAncestorNodes(node, root, inclusive) {
+  const ancestors = [];
+  const stop = inclusive ? root.parentNode : root;
+  let current = node;
+  while (current !== stop) {
+    ancestors.push(current);
+    current = current.parentNode;
+  }
+  return ancestors;
+}
+
+/**
+ * A reducer to convert a classList to a CSS selector.
+ * @see formatNodeSelector below
+ * @param {String} classNames
+ * @param {String} className
+ * @return {String}
+ */
+function reduceClassNames(classNames, className) {
+  return `${classNames}.${className}`;
+}
+
+/**
+ * Create a CSS selector for a specified node, consisting of its name (excluding
+ * div elements) and its CSS classnames.
+ * @example
+ * &lt;h1 class="heading big"/> => h1.heading.big
+ * @example
+ * &lt;div class="wrapper"/> => .wrapper
+ * @example
+ * &lt;span class="lorem-ipsum message"/> => span.lorem-ipsum.message
+ * @example
+ * &lt;div/> =>
+ * @param {HTMLElement} node
+ * @return {String}
+ */
+export function formatNodeSelector(node) {
+  const nodeName = node.nodeName !== 'DIV' ? node.nodeName.toLowerCase() : '';
+  const classes = reduce(node.classList, reduceClassNames, '');
+  return nodeName + classes;
+}
+
+/**
+ * Generate a string of CSS selectors which describes the path from an
+ * ancestor element to a specified descendant.
+ * @example
+ * &lt;div class="root">&lt;div class="hero">&lt;div>&lt;h1 class="heading big">
+ * .root .hero h1.heading.big
+ * @param {HTMLElement} node Descendent element
+ * @param {HTMLElement} root Top-level ancestor element
+ * @return String
+ */
+export function generateNodePath(node, root) {
+  return getAncestorNodes(node, root, true)
+    .reverse()
+    .map(formatNodeSelector)
+    .filter(selector => selector)
+    .join(' ');
+}
+
+/**
+ * Calculate the offset left and top positions of an element relative to
+ * the document.
+ * @param {HTMLElement} node
+ * @return {Object}
+ */
+export function getOffset(node) {
+  let left = 0;
+  let top = 0;
+  let currentNode = node;
+
+  while (currentNode) {
+    left += currentNode.offsetLeft;
+    top += currentNode.offsetTop;
+    currentNode = currentNode.offsetParent;
+  }
+
+  const width = node.offsetWidth;
+  const height = node.offsetHeight;
+
+  // Since coordinates are 0-based, the inverse coordinates of left and top
+  // (i.e. right and bottom) need to be offset by one.
+  let right = left + width - 1;
+  let bottom = top + height - 1;
+
+  // This is the weird part. Due to subpixel rendering of elements whose
+  // coordinates and/or dimensions are not integers, some elements receive
+  // events triggered outside their calculated bounds. Therefore, we must
+  // detect subpixel rendering and normalize the right and bottom offsets.
+  // To detect, check if right and bottom values of the bounding rectangle
+  // are float values. To normalize, increment the respective offset(s) to
+  // properly tare the coordinates of events that are triggered outside
+  // the previously calculated offset.
+  const { right: r, bottom: b } = node.getBoundingClientRect();
+
+  if (r !== parseInt(r, 10)) {
+    right++;
+  }
+
+  if (b !== parseInt(b, 10)) {
+    bottom++;
+  }
+
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width,
+    height,
+  };
+}
+
+/**
+ * Get the computed value for a specified CSS property.
+ * @param {HTMLElement} node
+ * @param {String} property
+ * @return {String}
+ */
+export function getComputedStyle(node, property) {
+  const document = node &amp;&amp; node.ownerDocument;
+  if (!document) {
+    return;
+  }
+
+  const window = document.defaultView;
+  const style = window.getComputedStyle(node, null);
+
+  return style.getPropertyValue(property);
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#filterNotNull">filterNotNull</a></li><li><a href="global.html#formatNodeSelector">formatNodeSelector</a></li><li><a href="global.html#generateNodePath">generateNodePath</a></li><li><a href="global.html#getAncestorNodes">getAncestorNodes</a></li><li><a href="global.html#getComputedStyle">getComputedStyle</a></li><li><a href="global.html#getOffset">getOffset</a></li><li><a href="global.html#mapOutputElements">mapOutputElements</a></li><li><a href="global.html#reduce">reduce</a></li><li><a href="global.html#reduceClassNames">reduceClassNames</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Sat Jun 04 2016 23:10:28 GMT-0700 (PDT)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
